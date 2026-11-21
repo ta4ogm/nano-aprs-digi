@@ -6,6 +6,8 @@ Arduino Nano tabanlı, bilgisayar gerektirmeyen APRS digipeater (WIDEn-N / fill-
 
 Çağrı işaretinizi, konumunuzu, açıklamayı, beacon aralığını ve digi tipini girin, size özel `.hex` dosyasını indirin. Derleme gerekmez; araç hazır yazılımın içindeki ayar bloğunu tarayıcıda değiştirir.
 
+Daha önce bu araçla oluşturduğunuz bir `.hex` dosyasını **"Mevcut bir hex dosyasını düzenle"** bölümünden yükleyip ayarlarını değiştirebilirsiniz. (Ayar bloğu olmayan eski sürümler düzenlenemez.)
+
 ## Özellikler
 
 - WIDEn-N digi (WIDE2-2'ye kadar, ayarlanabilir) veya fill-in (sadece WIDE1-1)

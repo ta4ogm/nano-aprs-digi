@@ -38,6 +38,16 @@
   <p class="sub">Ayarları girin, kendi hex dosyanızı indirin, XLoader ile Arduino Nano'ya yükleyin. Her şey tarayıcınızda çalışır; hiçbir veri bir yere gönderilmez.</p>
 
   <div class="card">
+    <h2>Mevcut bir hex dosyasını düzenle (isteğe bağlı)</h2>
+    <p class="hint" style="margin-top:0">Bu araçla daha önce oluşturduğunuz bir <code>.hex</code> dosyasını seçin; ayarları forma dolar. Değiştirip yeniden indirebilirsiniz.</p>
+    <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="file" id="hexfile" accept=".hex,.ihx,text/plain" style="max-width:340px">
+      <button type="button" id="resetBase" class="sec" style="background:transparent;color:var(--acc);border:1px solid var(--acc)" hidden>Boş forma dön</button>
+    </div>
+    <div class="msg" id="importMsg"></div>
+  </div>
+
+  <div class="card">
     <h2>İstasyon</h2>
     <div class="grid">
       <div><label for="call">Çağrı işareti</label><input id="call" value="" placeholder="Örn: TA1ABC" maxlength="6" autocomplete="off"><div class="hint">En fazla 6 karakter, SSID'siz.</div></div>
@@ -95,7 +105,7 @@
 
   <div class="card">
     <h2>Kart ve telsiz bağlantısı</h2>
-    <p class="hint" style="margin-top:0">TA4LGD kartı (BeRTOS/MicroModem tipi devre) ve iki pimli Kenwood tipi soketli telsizler (Baofeng, TYT vb.) için.</p>
+    <p class="hint" style="margin-top:0">(BeRTOS/MicroModem tipi devre) ve iki pimli Kenwood tipi soketli telsizler (Baofeng, TYT vb.) için.</p>
     <table>
       <tr><th>Kart pini</th><th>Görev</th><th>Telsiz fişi</th></tr>
       <tr><td>1</td><td>VIN (7–12 V)</td><td>–</td></tr>
@@ -762,8 +772,9 @@
     return s.split(',').map(x => { const [c, n] = x.split('-'); return { call: c, ssid: +n }; });
   }
 
-  const base = parseHex(document.getElementById('basehex').textContent);
-  const cfgAt = findMagic(base.mem, base.top);
+  const builtin = parseHex(document.getElementById('basehex').textContent);
+  let base = builtin;
+  let cfgAt = findMagic(base.mem, base.top);
 
   function build() {
     const errs = [], warns = [];
@@ -818,7 +829,68 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
   build();
-  window.__digi = { parseHex, patch, build, fmt };
+
+  // ---- hex içe aktarma ----
+  const cstr = (mem, o, n) => { let r = ''; for (let i = 0; i < n && mem[o + i]; i++) r += String.fromCharCode(mem[o + i]); return r; };
+  function readCfg(mem, at) {
+    let o = at + 8;
+    const call = cstr(mem, o, 7); o += 7; const ssid = mem[o++];
+    o += 7; // hedef
+    const p1 = cstr(mem, o, 7); o += 7; const p1s = mem[o++];
+    const p2 = cstr(mem, o, 7); o += 7; const p2s = mem[o++];
+    const first = mem[o] | (mem[o + 1] << 8); o += 2;
+    const interval = mem[o] | (mem[o + 1] << 8); o += 2;
+    const clamp = mem[o++];
+    const info = cstr(mem, o, 81);
+    return { call, ssid, p1, p1s, p2, p2s, first, interval, clamp, info };
+  }
+  function nmeaToDec(s, degW) {
+    const d = parseInt(s.slice(0, degW), 10), m = parseFloat(s.slice(degW, degW + 5)), h = s[degW + 5];
+    if (isNaN(d) || isNaN(m)) return null;
+    const v = d + m / 60; return (h === 'S' || h === 'W') ? -v : v;
+  }
+  function ensureOption(sel, value, label) {
+    if (![...sel.options].some(o => o.value === value)) { const o = document.createElement('option'); o.value = value; o.textContent = label; sel.appendChild(o); }
+    sel.value = value;
+  }
+  function importHex(text) {
+    const img = parseHex(text); const at = findMagic(img.mem, img.top);
+    if (at < 0) throw new Error('Bu dosyada ayar bloğu yok. Sadece bu araçla oluşturulmuş hex dosyaları düzenlenebilir.');
+    const c = readCfg(img.mem, at);
+    base = img; cfgAt = at;
+    $('call').value = c.call === 'NOCALL' ? '' : c.call;
+    $('ssid').value = c.ssid;
+    const m = c.info.match(/^!(\d{4}\.\d{2}[NS])(.)(\d{5}\.\d{2}[EW])(.)(.*)$/);
+    if (m) {
+      const la = nmeaToDec(m[1], 2), lo = nmeaToDec(m[3], 3);
+      $('coord').value = (la !== null && lo !== null) ? la.toFixed(6) + ', ' + lo.toFixed(6) : '';
+      ensureOption($('sym'), m[2] + m[4], 'Dosyadaki simge (' + m[2] + m[4] + ')');
+      $('comment').value = m[5];
+    } else { $('coord').value = ''; $('comment').value = ''; }
+    $('interval').value = c.interval; $('first').value = c.first;
+    const pv = [c.p1 && (c.p1 + '-' + c.p1s), c.p2 && (c.p2 + '-' + c.p2s)].filter(Boolean).join(',');
+    ensureOption($('path'), pv, pv || 'Yol yok (doğrudan)');
+    ensureOption($('clamp'), String(c.clamp), 'WIDE' + c.clamp + '-' + c.clamp + "'e kadar");
+    $('resetBase').hidden = false;
+    build();
+    return c;
+  }
+  $('hexfile').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try { const c = importHex(r.result); $('importMsg').className = 'msg'; $('importMsg').textContent = 'Yüklendi: ' + f.name + ' (' + (c.call || '?') + (c.ssid ? '-' + c.ssid : '') + '). Ayarları değiştirip yeniden indirebilirsiniz.'; }
+      catch (err) { $('importMsg').className = 'msg err'; $('importMsg').textContent = err.message; }
+    };
+    r.readAsText(f);
+  });
+  $('resetBase').addEventListener('click', () => {
+    base = builtin; cfgAt = findMagic(base.mem, base.top);
+    ['call', 'coord', 'comment'].forEach(id => $(id).value = '');
+    $('ssid').value = 1; $('sym').value = '/#'; $('interval').value = 30; $('first').value = 30; $('path').value = 'WIDE1-1,WIDE2-1'; $('clamp').value = '2';
+    $('hexfile').value = ''; $('importMsg').textContent = ''; $('resetBase').hidden = true; build();
+  });
+  window.__digi = { parseHex, patch, build, fmt, importHex };
 })();
 </script>
 </body>
