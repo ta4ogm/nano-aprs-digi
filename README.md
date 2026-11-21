@@ -16,7 +16,7 @@ Arduino Nano tabanlı, bilgisayar gerektirmeyen APRS digipeater (WIDEn-N / fill-
 
 ## Donanım
 
-BeRTOS / MicroModem tipi devre (TA4LGD kartı ile denendi):
+BeRTOS / MicroModem tipi devre:
 
 | Nano pini | Görev |
 |---|---|
