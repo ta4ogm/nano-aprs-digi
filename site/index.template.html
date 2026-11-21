@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nano APRS Digi – Ayar Aracı</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d232b; --muted:#5b6673; --line:#dde2e8; --acc:#1f6f43; --warn:#9a5b00; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --card:#1a1f25; --ink:#e7ebef; --muted:#9aa5b1; --line:#2c333b; --acc:#5cc58a; --warn:#e3a34a; --err:#ff8a80; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; }
+  .card h2 { font-size:16px; margin:0 0 12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  .full { grid-column:1 / -1; }
+  @media (max-width:560px) { .grid { grid-template-columns:1fr; } }
+  label { display:block; font-weight:600; font-size:13px; margin-bottom:4px; }
+  input, select { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--ink); font:inherit; }
+  input:focus, select:focus { outline:2px solid var(--acc); outline-offset:-1px; }
+  .hint { color:var(--muted); font-size:12.5px; margin-top:3px; }
+  .preview { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13.5px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; word-break:break-all; }
+  .msg { font-size:13.5px; margin-top:8px; }
+  .msg.err { color:var(--err); } .msg.warn { color:var(--warn); }
+  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:11px 18px; font:600 15px system-ui, sans-serif; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  ol { padding-left:20px; margin:0; } li { margin:4px 0; }
+  code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Nano APRS Digi – Ayar Aracı</h1>
+  <p class="sub">Ayarları girin, kendi hex dosyanızı indirin, XLoader ile Arduino Nano'ya yükleyin. Her şey tarayıcınızda çalışır; hiçbir veri bir yere gönderilmez.</p>
+
+  <div class="card">
+    <h2>İstasyon</h2>
+    <div class="grid">
+      <div><label for="call">Çağrı işareti</label><input id="call" value="TA4OGM" maxlength="6" autocomplete="off"><div class="hint">En fazla 6 karakter, SSID'siz.</div></div>
+      <div><label for="ssid">SSID</label><select id="ssid"></select></div>
+      <div class="full"><label for="coord">Konum (enlem, boylam)</label><input id="coord" value="36.986323, 31.435992" autocomplete="off"><div class="hint">Google Maps'ten kopyaladığınız biçimde yapıştırın: <code>36.986323, 31.435992</code></div></div>
+      <div><label for="sym">Harita simgesi</label>
+        <select id="sym">
+          <option value="/#">Digi (yeşil yıldız)</option>
+          <option value="S#">Digi, üstünde S harfi</option>
+          <option value="/r">Anten / kule</option>
+          <option value="/-">Ev</option>
+        </select></div>
+      <div><label for="comment">Açıklama (isteğe bağlı)</label><input id="comment" value="" maxlength="43" autocomplete="off"><div class="hint">Türkçe karakterler otomatik çevrilir (ç→c, ş→s…).</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Beacon ve digi</h2>
+    <div class="grid">
+      <div><label for="interval">Beacon aralığı (dakika)</label><input id="interval" type="number" min="0" max="1440" value="30"><div class="hint">Sabit digi için 30 dk önerilir. 0 = beacon kapalı.</div></div>
+      <div><label for="first">Açılıştan sonra ilk beacon (saniye)</label><input id="first" type="number" min="1" max="3600" value="30"></div>
+      <div><label for="path">Beacon yolu</label>
+        <select id="path">
+          <option value="WIDE1-1,WIDE2-1">WIDE1-1,WIDE2-1 (önerilen)</option>
+          <option value="WIDE2-1">WIDE2-1</option>
+          <option value="WIDE2-2">WIDE2-2</option>
+          <option value="">Yol yok (doğrudan)</option>
+        </select></div>
+      <div><label for="clamp">Digi tipi</label>
+        <select id="clamp">
+          <option value="2">Normal WIDEn-N (WIDE2-2'ye kadar)</option>
+          <option value="1">Fill-in (sadece WIDE1-1)</option>
+          <option value="3">Geniş (WIDE3-3'e kadar)</option>
+        </select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Önizleme</h2>
+    <div class="preview" id="preview"></div>
+    <div class="msg" id="msg"></div>
+    <p style="margin:14px 0 0"><button id="dl">Hex dosyasını indir</button></p>
+  </div>
+
+  <div class="card">
+    <h2>Yükleme</h2>
+    <ol>
+      <li>Arduino IDE'nin Serial Monitor'ü açıksa kapatın.</li>
+      <li><b>XLoader</b>'ı açın, indirdiğiniz dosyayı seçin.</li>
+      <li>Device: <b>Duemilanove/Nano (ATmega328)</b> (57600). Hata verirse <b>Uno (ATmega328)</b> (115200) deneyin.</li>
+      <li>COM portu seçip <b>Upload</b>'a basın.</li>
+      <li>Kontrol için Serial Monitor'ü <b>9600</b> hızında açın: açılış mesajı görünür. <code>b</code> + Enter anında beacon gönderir.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Kart ve telsiz bağlantısı</h2>
+    <p class="hint" style="margin-top:0">TA4LGD kartı (BeRTOS/MicroModem tipi devre) ve iki pimli Kenwood tipi soketli telsizler (Baofeng, TYT vb.) için.</p>
+    <table>
+      <tr><th>Kart pini</th><th>Görev</th><th>Telsiz fişi</th></tr>
+      <tr><td>1</td><td>VIN (7–12 V)</td><td>–</td></tr>
+      <tr><td>2, 3, 7</td><td>GND</td><td>2.5 mm gövde → pin 7</td></tr>
+      <tr><td>4</td><td>Telsize giden ses</td><td>3.5 mm orta halka, araya 1 µF (+ telsiz tarafında)</td></tr>
+      <tr><td>5</td><td>Telsizden gelen ses</td><td>2.5 mm uç</td></tr>
+      <tr><td>6</td><td>PTT</td><td>3.5 mm gövde</td></tr>
+      <tr><td>–</td><td>(boş)</td><td>3.5 mm uç – bağlamayın</td></tr>
+    </table>
+  </div>
+
+  <p class="hint">Yazılım, Mark Qvist'in MicroDigi projesi temel alınarak hazırlanmıştır (GPL-3.0). Çağrı işaretiyle yayın yapmak için amatör telsiz lisansı gerekir.</p>
+</main>
+
+<script id="basehex" type="text/plain">__BASE_HEX__</script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  for (let i = 0; i <= 15; i++) { const o = document.createElement('option'); o.value = i; o.textContent = i === 0 ? '0 (yok)' : i; if (i === 1) o.selected = true; $('ssid').appendChild(o); }
+
+  // ---- Intel HEX ----
+  function parseHex(txt) {
+    const mem = new Uint8Array(32768).fill(0xFF); let top = 0;
+    for (const raw of txt.split(/\r?\n/)) {
+      const l = raw.trim(); if (!l.startsWith(':')) continue;
+      const n = parseInt(l.substr(1, 2), 16), a = parseInt(l.substr(3, 4), 16), t = parseInt(l.substr(7, 2), 16);
+      if (t !== 0) continue;
+      for (let i = 0; i < n; i++) mem[a + i] = parseInt(l.substr(9 + 2 * i, 2), 16);
+      top = Math.max(top, a + n);
+    }
+    return { mem, top };
+  }
+  function toHex(mem, top) {
+    const h = b => b.toString(16).toUpperCase().padStart(2, '0'); let out = '';
+    for (let a = 0; a < top; a += 16) {
+      const n = Math.min(16, top - a); const rec = [n, a >> 8, a & 255, 0];
+      for (let i = 0; i < n; i++) rec.push(mem[a + i]);
+      const sum = rec.reduce((s, b) => s + b, 0);
+      out += ':' + rec.map(h).join('') + h((-sum) & 255) + '\r\n';
+    }
+    return out + ':00000001FF\r\n';
+  }
+  function findMagic(mem, top) {
+    const m = [65, 80, 82, 83, 67, 70, 71, 49]; // APRSCFG1
+    outer: for (let i = 0; i < top - 8; i++) { for (let j = 0; j < 8; j++) if (mem[i + j] !== m[j]) continue outer; return i; }
+    return -1;
+  }
+
+  // ---- APRS helpers ----
+  const tr = { 'ç':'c','Ç':'C','ğ':'g','Ğ':'G','ı':'i','İ':'I','ö':'o','Ö':'O','ş':'s','Ş':'S','ü':'u','Ü':'U' };
+  const ascii = s => s.replace(/[çÇğĞıİöÖşŞüÜ]/g, c => tr[c]).replace(/[^\x20-\x7E]/g, '');
+  function fmt(v, degW, pos, neg) {
+    const h = v >= 0 ? pos : neg; v = Math.abs(v);
+    let d = Math.floor(v), m = Math.round((v - d) * 6000) / 100;
+    if (m >= 60) { d += 1; m = 0; }
+    return String(d).padStart(degW, '0') + m.toFixed(2).padStart(5, '0') + h;
+  }
+  function parseCoord(s) {
+    const p = s.replace(/[;\s]+/g, ' ').split(/[ ,]+/).filter(Boolean).map(Number);
+    if (p.length !== 2 || p.some(isNaN)) return null;
+    if (Math.abs(p[0]) > 90 || Math.abs(p[1]) > 180) return null;
+    return p;
+  }
+  function parsePath(s) {
+    if (!s) return [];
+    return s.split(',').map(x => { const [c, n] = x.split('-'); return { call: c, ssid: +n }; });
+  }
+
+  const base = parseHex(document.getElementById('basehex').textContent);
+  const cfgAt = findMagic(base.mem, base.top);
+
+  function build() {
+    const errs = [], warns = [];
+    const call = $('call').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,6}$/.test(call)) errs.push('Çağrı işareti 3–6 harf/rakam olmalı.');
+    const ssid = +$('ssid').value;
+    const c = parseCoord($('coord').value);
+    if (!c) errs.push('Konum anlaşılamadı. Örnek: 36.986323, 31.435992');
+    const sym = $('sym').value;
+    const comment = ascii($('comment').value);
+    const interval = Math.round(+$('interval').value), first = Math.round(+$('first').value);
+    if (!(interval >= 0 && interval <= 1440)) errs.push('Beacon aralığı 0–1440 dakika olmalı.');
+    else if (interval > 0 && interval < 10) warns.push('10 dakikadan sık beacon, frekansı gereksiz meşgul eder.');
+    if (!(first >= 1 && first <= 3600)) errs.push('İlk beacon süresi 1–3600 saniye olmalı.');
+    const path = parsePath($('path').value);
+    const clamp = +$('clamp').value;
+    let info = '';
+    if (c) info = '!' + fmt(c[0], 2, 'N', 'S') + sym[0] + fmt(c[1], 3, 'E', 'W') + sym[1] + comment;
+    if (info.length > 80) errs.push('Açıklama çok uzun.');
+    if (cfgAt < 0) errs.push('Temel yazılımda ayar bloğu bulunamadı.');
+    const name = call + (ssid ? '-' + ssid : '');
+    const pathTxt = path.map(p => p.call + '-' + p.ssid).join(',');
+    $('preview').textContent = errs.length && !c ? '–' : name + '>APZMDG' + (pathTxt ? ',' + pathTxt : '') + ':' + info;
+    $('msg').className = 'msg ' + (errs.length ? 'err' : warns.length ? 'warn' : '');
+    $('msg').textContent = errs.concat(warns).join(' ');
+    $('dl').disabled = errs.length > 0;
+    return { ok: !errs.length, call, ssid, path, first, interval, clamp, info, name };
+  }
+
+  function field(str, n) { const b = new Uint8Array(n); for (let i = 0; i < str.length && i < n - 1; i++) b[i] = str.charCodeAt(i); return b; }
+
+  function patch(cfg) {
+    const mem = base.mem.slice(); let o = cfgAt + 8;
+    const put = arr => { mem.set(arr, o); o += arr.length; };
+    put(field(cfg.call, 7)); put([cfg.ssid]);
+    put(field('APZMDG', 7));
+    const p1 = cfg.path[0] || { call: '', ssid: 0 }, p2 = cfg.path[1] || { call: '', ssid: 0 };
+    put(field(p1.call, 7)); put([p1.ssid]);
+    put(field(p2.call, 7)); put([p2.ssid]);
+    put([cfg.first & 255, cfg.first >> 8, cfg.interval & 255, cfg.interval >> 8]);
+    put([cfg.clamp]);
+    put(field(cfg.info, 81));
+    return toHex(mem, base.top);
+  }
+
+  ['call', 'ssid', 'coord', 'sym', 'comment', 'interval', 'first', 'path', 'clamp'].forEach(id => $(id).addEventListener('input', build));
+  $('dl').addEventListener('click', () => {
+    const cfg = build(); if (!cfg.ok) return;
+    const blob = new Blob([patch(cfg)], { type: 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = cfg.name + '_digi.hex'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  build();
+  window.__digi = { parseHex, patch, build, fmt };
+})();
+</script>
+</body>
+</html>
