@@ -76,7 +76,11 @@ static void addr_put_P(uint8_t *b, const char *call_P, uint8_t ssid, bool last) 
     addr_put(b, tmp, ssid, last);
 }
 
-static uint8_t frame[7 * 4 + 2 + INFO_MAX + 1];
+// Beacon/telemetri cercevesi icin digipeater'in cikis tamponunu kullan (RAM tasarrufu).
+// Bu tampon sadece digipeater_processPackets() icinde kullaniliyor; ana dongude cakisma olmaz.
+extern uint8_t packetBufferOut[];
+#define frame packetBufferOut
+#define FRAME_MAX (7 * 4 + 2 + INFO_MAX + 1)
 
 // Cerceve basligini (hedef, kaynak, yol, kontrol, PID) yazar; bilgi alaninin baslangicini dondurur
 static uint8_t frame_header(void) {
@@ -142,7 +146,7 @@ static void tlm_send_next(void) {
     char a[10];
     uint8_t len = frame_header();
     char *p = (char *)frame + len;
-    uint8_t room = sizeof(frame) - len;
+    uint8_t room = FRAME_MAX - len;
     tlm_addressee(a);
     if (tlm_pending & TLM_PARM) {
         len += snprintf_P(p, room, PSTR(":%s:PARM.Rx1h,Dg1h,Vcc"), a);

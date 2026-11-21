@@ -29,7 +29,7 @@ extern uint8_t digi_ssid;
 
 // How many packets to keep in the duplicate
 // checklist
-#define DUPL_LIST_SIZE 32
+#define DUPL_LIST_SIZE 16
 
 // How long a packet is kept in the duplicate
 // checklist
