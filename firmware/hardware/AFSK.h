@@ -156,4 +156,8 @@ void AFSK_init(Afsk *afsk);
 void AFSK_transmit(char *buffer, size_t size);
 void AFSK_poll(Afsk *afsk);
 
+void AFSK_vcc_start(void);
+uint16_t AFSK_vcc_mv(void);
+extern bool hw_afsk_dac_isr;
+
 #endif

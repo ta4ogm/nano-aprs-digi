@@ -35,7 +35,8 @@ typedef struct dupl_entry {
 dupl_entry dupl_list[DUPL_LIST_SIZE];
 uint8_t dupl_i = 0;
 
-int clamp_n = DIGIPEATER_CLAMP_N; // ayar blogundan main.c icinde atanir
+int clamp_n = DIGIPEATER_CLAMP_N;
+volatile uint16_t tlm_rx = 0, tlm_dg = 0;   // telemetri sayaclari // ayar blogundan main.c icinde atanir
 
 void digipeater_processPackets(void) {
     // If we're waiting in CSMA, drop this packet
@@ -61,6 +62,7 @@ void digipeater_processPackets(void) {
             char mycall[6] = {0};
             memcpy(mycall, DIGIPEATER_CALLSIGN, MIN(6, strlen(DIGIPEATER_CALLSIGN)));
             if (memcmp(mycall, src.call, 6) == 0 && src.ssid == DIGIPEATER_SSID) unrelated = true;
+            else tlm_rx++;
         }
 
         uint8_t rpt_count;
@@ -237,6 +239,7 @@ void digipeater_processPackets(void) {
             if (!is_duplicate(crcl, crch)) {
                 // Send it out!
                 digipeater_csma(ax25ctx, packetBufferOut, frame_len_out);
+                tlm_dg++;
 
                 // Add packet to duplicate checklist
                 dupl_list[dupl_i].crcl = crcl;

@@ -1,3 +1,4 @@
+#include <util/atomic.h>
 #include <string.h>
 #include "AFSK.h"
 #include "util/time.h"
@@ -495,9 +496,41 @@ void AFSK_adc_isr(Afsk *afsk, int8_t currentSample) {
 }
 
 
+// --- Vcc (5V hatti) olcumu: ADC kisa sureligine dahili 1.1V referansa gecer ---
+volatile uint8_t vcc_state = 0;
+volatile uint8_t vcc_n = 0;
+volatile uint16_t vcc_acc = 0;
+volatile uint16_t vcc_result = 0;
+
+void AFSK_vcc_start(void) { if (vcc_state == 0) { vcc_result = 0; vcc_state = 1; } }
+uint16_t AFSK_vcc_mv(void) {
+    uint16_t r;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { r = vcc_result; }
+    if (r == 0) return 0;
+    return (uint16_t)((1100UL * 1024UL * 16UL) / r);
+}
+
 ISR(ADC_vect) {
     TIFR1 = _BV(ICF1);
-    AFSK_adc_isr(AFSK_modem, ((int16_t)((ADC) >> 2) - 128));
+    uint16_t adc = ADC;
+    if (vcc_state) {
+        if (vcc_state == 1) {
+            ADMUX = _BV(REFS0) | 0x0E;      // AVcc referans, giris = 1.1V bandgap
+            vcc_acc = 0; vcc_n = 0; vcc_state = 2;
+        } else if (vcc_state < 40) {
+            vcc_state++;                    // ~4 ms oturma suresi
+        } else {
+            vcc_acc += adc;
+            if (++vcc_n >= 16) {
+                vcc_result = vcc_acc;
+                ADMUX = hw_5v_ref ? (_BV(REFS0) | 0) : 0;   // tekrar A0 (telsiz sesi)
+                vcc_state = 0;
+            }
+        }
+        AFSK_adc_isr(AFSK_modem, 0);        // olcum sirasinda modeme sessizlik ver
+    } else {
+        AFSK_adc_isr(AFSK_modem, ((int16_t)(adc >> 2) - 128));
+    }
     if (hw_afsk_dac_isr) {
         DAC_PORT = (AFSK_dac_isr(AFSK_modem) & 0xF0) | _BV(3); 
     } else {
