@@ -108,7 +108,7 @@ static void send_beacon(void) {
 }
 
 // ===== TELEMETRI =====
-// Her aralikta: saatlik duyulan paket (Rx1h), saatlik tekrarlanan paket (Dg1h), Nano besleme voltaji (Vcc).
+// Her aralikta: saatlik duyulan paket (Rx1h) ve saatlik tekrarlanan paket (Dg1h).
 // Tanim paketleri (PARM/UNIT/EQNS) ilk seferde ve her 6 telemetride bir gonderilir.
 #define TLM_PARM 0x01
 #define TLM_UNIT 0x02
@@ -120,7 +120,6 @@ static uint16_t tlm_seq = 0;
 static uint16_t tlm_rx_rate = 0, tlm_dg_rate = 0;
 static uint32_t tlm_last = 0;
 static uint32_t tlm_last_tx = 0;
-static bool vcc_needed = false;
 
 static void tlm_addressee(char *a) {     // "TA4OGM-1 " (9 karakter)
     uint8_t n = snprintf_P(a, 10, PSTR("%s-%d"), digi_call, digi_ssid);
@@ -139,7 +138,6 @@ static void tlm_due(uint32_t now, bool defs) {
     if (defs || tlm_cycle == 0) tlm_pending |= TLM_PARM | TLM_UNIT | TLM_EQNS;
     tlm_pending |= TLM_DATA;
     tlm_cycle = (tlm_cycle + 1) % 6;
-    vcc_needed = true;                  // olcum kanal bosken yapilir
 }
 
 static void tlm_send_next(void) {
@@ -149,23 +147,21 @@ static void tlm_send_next(void) {
     uint8_t room = FRAME_MAX - len;
     tlm_addressee(a);
     if (tlm_pending & TLM_PARM) {
-        len += snprintf_P(p, room, PSTR(":%s:PARM.Rx1h,Dg1h,Vcc"), a);
+        len += snprintf_P(p, room, PSTR(":%s:PARM.Rx1h,Dg1h"), a);
         tlm_pending &= ~TLM_PARM;
     } else if (tlm_pending & TLM_UNIT) {
-        len += snprintf_P(p, room, PSTR(":%s:UNIT.Pkt,Pkt,V"), a);
+        len += snprintf_P(p, room, PSTR(":%s:UNIT.Pkt,Pkt"), a);
         tlm_pending &= ~TLM_UNIT;
     } else if (tlm_pending & TLM_EQNS) {
-        len += snprintf_P(p, room, PSTR(":%s:EQNS.0,2,0,0,2,0,0,0.025,0,0,0,0,0,0,0"), a);
+        len += snprintf_P(p, room, PSTR(":%s:EQNS.0,2,0,0,2,0,0,0,0,0,0,0,0,0,0"), a);
         tlm_pending &= ~TLM_EQNS;
     } else if (tlm_pending & TLM_DATA) {
-        uint16_t mv = AFSK_vcc_mv();
         uint16_t rx = (tlm_rx_rate + 1) / 2; if (rx > 255) rx = 255;
         uint16_t dg = (tlm_dg_rate + 1) / 2; if (dg > 255) dg = 255;
-        uint16_t vc = (mv + 12) / 25;        if (vc > 255) vc = 255;
-        len += snprintf_P(p, room, PSTR("T#%03u,%03u,%03u,%03u,000,000,00000000"), tlm_seq, rx, dg, vc);
+        len += snprintf_P(p, room, PSTR("T#%03u,%03u,%03u,000,000,000,00000000"), tlm_seq, rx, dg);
         tlm_seq = (tlm_seq + 1) % 1000;
         tlm_pending &= ~TLM_DATA;
-        printf_P(PSTR("Telemetri: Rx %u/saat, Dg %u/saat, Vcc %u.%02u V\n"), tlm_rx_rate, tlm_dg_rate, mv / 1000, (mv % 1000) / 10);
+        printf_P(PSTR("Telemetri: Rx %u/saat, Dg %u/saat\n"), tlm_rx_rate, tlm_dg_rate);
     } else {
         return;
     }
@@ -218,22 +214,11 @@ int main (void) {
 
         if (tlm_on && !tlm_pending && now - tlm_last >= tlm_ticks) tlm_due(now, false);
 
-        // Vcc olcumunu sadece kanal bosken yap (olcum ~6 ms surer)
-        if (vcc_needed && !modem.hdlc.receiving && !hw_afsk_dac_isr) {
-            AFSK_vcc_start();
-            vcc_needed = false;
-        }
-
         // Telemetri paketlerini kanal bosken, aralarinda 3 sn birakarak gonder
         if (tlm_pending && !modem.hdlc.receiving && !hw_afsk_dac_isr &&
             now - tlm_last_tx >= 3UL * CLOCK_TICKS_PER_SEC) {
-            if (!(tlm_pending & ~TLM_DATA) && AFSK_vcc_mv() == 0) {
-                vcc_needed = true;              // olcum bitmediyse tekrar dene
-                tlm_last_tx = now - 2UL * CLOCK_TICKS_PER_SEC;
-            } else {
-                tlm_send_next();
-                tlm_last_tx = (uint32_t)timer_clock();
-            }
+            tlm_send_next();
+            tlm_last_tx = (uint32_t)timer_clock();
         }
 
         ax25_poll(&AX25);

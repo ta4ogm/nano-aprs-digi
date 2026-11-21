@@ -15,7 +15,7 @@ Daha önce bu araçla oluşturduğunuz bir `.hex` dosyasını **"Mevcut bir hex 
 - Sabit konum beacon'ı (aralık, ilk beacon süresi, yol, simge, açıklama ayarlanabilir)
 - Serial Monitor (9600) çıktısı: `Paket geldi: KAYNAK>HEDEF,YOL: bilgi` ve tekrarlanıp tekrarlanmadığı
 - Serial Monitor'de `b` + Enter: anında beacon, `t` + Enter: anında telemetri (test için)
-- Telemetri (isteğe bağlı, 30/60 dk): saatlik duyulan paket (Rx1h), saatlik tekrarlanan paket (Dg1h) ve Nano'nun besleme voltajı (Vcc). Vcc, ATmega'nın dahili 1.1 V referansıyla ölçülür; ek parça gerekmez, doğruluk yaklaşık ±%10'dur. Sayılar 2 paket çözünürlükle gönderilir (en fazla 510/saat).
+- Telemetri (isteğe bağlı, 30/60 dk): saatlik duyulan paket (Rx1h) ve saatlik tekrarlanan paket (Dg1h). Sayılar 2 paket çözünürlükle gönderilir (en fazla 510/saat).
 - Açıklamaya yükseklik eklenebilir (`/A=` alanı, aprs.fi'de "alt … m")
 
 ## Donanım
