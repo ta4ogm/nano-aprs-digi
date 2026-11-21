@@ -17,6 +17,7 @@ Daha önce bu araçla oluşturduğunuz bir `.hex` dosyasını **"Mevcut bir hex 
 - Serial Monitor'de `b` + Enter: anında beacon, `t` + Enter: anında telemetri (test için)
 - Telemetri (isteğe bağlı, 30/60 dk): saatlik duyulan paket (Rx1h) ve saatlik tekrarlanan paket (Dg1h). Sayılar 2 paket çözünürlükle gönderilir (en fazla 510/saat).
 - Açıklamaya yükseklik eklenebilir (`/A=` alanı, aprs.fi'de "alt … m")
+- İsteğe bağlı PHG (güç, anten yüksekliği, kazanç, yön); aprs.fi bundan kapsama mesafesini hesaplar
 
 ## Donanım
 

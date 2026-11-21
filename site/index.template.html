@@ -66,6 +66,38 @@
   </div>
 
   <div class="card">
+    <h2>İstasyon bilgisi – PHG (isteğe bağlı)</h2>
+    <p class="hint" style="margin-top:0">aprs.fi'de "güç … W, anten HAAT … m, kazanç … dBi" satırını ve tahmini kapsama mesafesini gösterir.</p>
+    <div class="grid">
+      <div><label for="phgP">Verici gücü</label>
+        <select id="phgP">
+          <option value="">Ekleme</option>
+          <option value="0">0 W</option><option value="1">1 W</option><option value="2">4 W</option><option value="3">9 W</option>
+          <option value="4">16 W</option><option value="5">25 W</option><option value="6">36 W</option><option value="7">49 W</option>
+          <option value="8">64 W</option><option value="9">81 W</option>
+        </select><div class="hint">APRS gücü kademeli yazar; en yakın değeri seçin (5 W için 4 W).</div></div>
+      <div><label for="phgH">Anten yüksekliği (HAAT)</label>
+        <select id="phgH">
+          <option value="0">3 m</option><option value="1">6 m</option><option value="2">12 m</option><option value="3">24 m</option>
+          <option value="4">49 m</option><option value="5">98 m</option><option value="6" selected>195 m</option><option value="7">390 m</option>
+          <option value="8">780 m</option><option value="9">1561 m</option>
+        </select><div class="hint">Denizden yükseklik değil; antenin <b>çevredeki ortalama araziden</b> ne kadar yüksekte olduğu. Tepedeki bir istasyon için genelde 100–400 m.</div></div>
+      <div><label for="phgG">Anten kazancı</label>
+        <select id="phgG">
+          <option value="0">0 dBi</option><option value="1">1 dBi</option><option value="2" selected>2 dBi</option><option value="3">3 dBi</option>
+          <option value="4">4 dBi</option><option value="5">5 dBi</option><option value="6">6 dBi</option><option value="7">7 dBi</option>
+          <option value="8">8 dBi</option><option value="9">9 dBi</option>
+        </select></div>
+      <div><label for="phgD">Anten yönü</label>
+        <select id="phgD">
+          <option value="0">Çok yönlü (omni)</option>
+          <option value="1">Kuzeydoğu (45°)</option><option value="2">Doğu (90°)</option><option value="3">Güneydoğu (135°)</option><option value="4">Güney (180°)</option>
+          <option value="5">Güneybatı (225°)</option><option value="6">Batı (270°)</option><option value="7">Kuzeybatı (315°)</option><option value="8">Kuzey (360°)</option>
+        </select></div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Beacon ve digi</h2>
     <div class="grid">
       <div><label for="interval">Beacon aralığı (dakika)</label><input id="interval" type="number" min="0" max="1440" value="30"><div class="hint">Sabit digi için 30 dk önerilir. 0 = beacon kapalı.</div></div>
@@ -197,6 +229,9 @@
     const altRaw = $('alt').value.trim(); let altTxt = '';
     if (altRaw !== '') { const am = Number(altRaw); if (!(am >= 0 && am <= 9000)) errs.push('Yükseklik 0–9000 m olmalı.'); else altTxt = '/A=' + String(Math.round(am * 3.28084)).padStart(6, '0'); }
     const tlm = +$('tlm').value;
+    const phgOn = $('phgP').value !== '';
+    ['phgH', 'phgG', 'phgD'].forEach(id => $(id).disabled = !phgOn);
+    const phg = phgOn ? 'PHG' + $('phgP').value + $('phgH').value + $('phgG').value + $('phgD').value : '';
     const interval = Math.round(+$('interval').value), first = Math.round(+$('first').value);
     if (!(interval >= 0 && interval <= 1440)) errs.push('Beacon aralığı 0–1440 dakika olmalı.');
     else if (interval > 0 && interval < 10) warns.push('10 dakikadan sık beacon, frekansı gereksiz meşgul eder.');
@@ -204,7 +239,7 @@
     const path = parsePath($('path').value);
     const clamp = +$('clamp').value;
     let info = '';
-    if (c) info = '!' + fmt(c[0], 2, 'N', 'S') + sym[0] + fmt(c[1], 3, 'E', 'W') + sym[1] + altTxt + (altTxt && comment ? ' ' : '') + comment;
+    if (c) info = '!' + fmt(c[0], 2, 'N', 'S') + sym[0] + fmt(c[1], 3, 'E', 'W') + sym[1] + phg + altTxt + (altTxt && comment ? ' ' : '') + comment;
     if (info.length > 100) errs.push('Açıklama çok uzun (' + (info.length - 100) + ' karakter fazla).');
     else if (comment.length > 43) warns.push('APRS standardı açıklama için 43 karakter öneriyor; aprs.fi daha uzununu da gösterir.');
     if (cfgAt < 0) errs.push('Temel yazılımda ayar bloğu bulunamadı.');
@@ -235,7 +270,7 @@
     return toHex(mem, base.top);
   }
 
-  ['call', 'ssid', 'coord', 'sym', 'alt', 'comment', 'interval', 'first', 'path', 'clamp', 'tlm'].forEach(id => $(id).addEventListener('input', build));
+  ['call', 'ssid', 'coord', 'sym', 'phgP', 'phgH', 'phgG', 'phgD', 'alt', 'comment', 'interval', 'first', 'path', 'clamp', 'tlm'].forEach(id => $(id).addEventListener('input', build));
   $('dl').addEventListener('click', () => {
     const cfg = build(); if (!cfg.ok) return;
     const blob = new Blob([patch(cfg)], { type: 'text/plain' });
@@ -281,7 +316,9 @@
       const la = nmeaToDec(m[1], 2), lo = nmeaToDec(m[3], 3);
       $('coord').value = (la !== null && lo !== null) ? la.toFixed(6) + ', ' + lo.toFixed(6) : '';
       ensureOption($('sym'), m[2] + m[4], 'Dosyadaki simge (' + m[2] + m[4] + ')');
-      let rest = m[5]; const am = rest.match(/^\/A=(\d{6}) ?/);
+      let rest = m[5]; const pm = rest.match(/^PHG(\d)(\d)(\d)(\d)/);
+      if (pm) { $('phgP').value = pm[1]; $('phgH').value = pm[2]; $('phgG').value = pm[3]; $('phgD').value = pm[4]; rest = rest.slice(7); } else $('phgP').value = '';
+      const am = rest.match(/^\/A=(\d{6}) ?/);
       if (am) { $('alt').value = Math.round(parseInt(am[1], 10) / 3.28084); rest = rest.slice(am[0].length); } else $('alt').value = '';
       $('comment').value = rest;
     } else { $('coord').value = ''; $('comment').value = ''; $('alt').value = ''; }
@@ -305,7 +342,7 @@
   });
   $('resetBase').addEventListener('click', () => {
     ['call', 'coord', 'comment', 'alt'].forEach(id => $(id).value = '');
-    $('tlm').value = '60';
+    $('tlm').value = '60'; $('phgP').value = ''; $('phgH').value = '6'; $('phgG').value = '2'; $('phgD').value = '0';
     $('ssid').value = 1; $('sym').value = '/#'; $('interval').value = 30; $('first').value = 30; $('path').value = 'WIDE1-1,WIDE2-1'; $('clamp').value = '2';
     $('hexfile').value = ''; $('importMsg').textContent = ''; $('resetBase').hidden = true; build();
   });
