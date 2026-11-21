@@ -40,9 +40,9 @@
   <div class="card">
     <h2>İstasyon</h2>
     <div class="grid">
-      <div><label for="call">Çağrı işareti</label><input id="call" value="TA4OGM" maxlength="6" autocomplete="off"><div class="hint">En fazla 6 karakter, SSID'siz.</div></div>
+      <div><label for="call">Çağrı işareti</label><input id="call" value="" placeholder="Örn: TA1ABC" maxlength="6" autocomplete="off"><div class="hint">En fazla 6 karakter, SSID'siz.</div></div>
       <div><label for="ssid">SSID</label><select id="ssid"></select></div>
-      <div class="full"><label for="coord">Konum (enlem, boylam)</label><input id="coord" value="36.986323, 31.435992" autocomplete="off"><div class="hint">Google Maps'ten kopyaladığınız biçimde yapıştırın: <code>36.986323, 31.435992</code></div></div>
+      <div class="full"><label for="coord">Konum (enlem, boylam)</label><input id="coord" value="" placeholder="enlem, boylam" autocomplete="off"><div class="hint">Google Maps'te konuma sağ tıklayıp kopyaladığınız sayıları yapıştırın (örnek biçim: <code>39.92, 32.85</code>).</div></div>
       <div><label for="sym">Harita simgesi</label>
         <select id="sym">
           <option value="/#">Digi (yeşil yıldız)</option>
@@ -170,10 +170,10 @@
   function build() {
     const errs = [], warns = [];
     const call = $('call').value.trim().toUpperCase();
-    if (!/^[A-Z0-9]{3,6}$/.test(call)) errs.push('Çağrı işareti 3–6 harf/rakam olmalı.');
+    if (!call) errs.push('Çağrı işareti girin.'); else if (!/^[A-Z0-9]{3,6}$/.test(call)) errs.push('Çağrı işareti 3–6 harf/rakam olmalı.');
     const ssid = +$('ssid').value;
     const c = parseCoord($('coord').value);
-    if (!c) errs.push('Konum anlaşılamadı. Örnek: 36.986323, 31.435992');
+    if (!$('coord').value.trim()) errs.push('Konum girin.'); else if (!c) errs.push('Konum anlaşılamadı. Biçim: enlem, boylam');
     const sym = $('sym').value;
     const comment = ascii($('comment').value);
     const interval = Math.round(+$('interval').value), first = Math.round(+$('first').value);
@@ -188,7 +188,7 @@
     if (cfgAt < 0) errs.push('Temel yazılımda ayar bloğu bulunamadı.');
     const name = call + (ssid ? '-' + ssid : '');
     const pathTxt = path.map(p => p.call + '-' + p.ssid).join(',');
-    $('preview').textContent = errs.length && !c ? '–' : name + '>APZMDG' + (pathTxt ? ',' + pathTxt : '') + ':' + info;
+    $('preview').textContent = (!call || !c) ? '–' : name + '>APZMDG' + (pathTxt ? ',' + pathTxt : '') + ':' + info;
     $('msg').className = 'msg ' + (errs.length ? 'err' : warns.length ? 'warn' : '');
     $('msg').textContent = errs.concat(warns).join(' ');
     $('dl').disabled = errs.length > 0;

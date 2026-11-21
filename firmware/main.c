@@ -40,12 +40,12 @@ typedef struct __attribute__((packed)) {
 
 const cfg_t CFG PROGMEM __attribute__((used)) = {
     {'A','P','R','S','C','F','G','1'},
-    "TA4OGM", 1,
+    "NOCALL", 0,            // varsayilan: ayar araci ile degistirin
     "APZMDG",
     "WIDE1", 1,
     "WIDE2", 1,
-    30, 30, 2,
-    "!3659.18N/03126.16E#"
+    30, 0, 2,               // beacon varsayilan olarak kapali
+    ""
 };
 
 char digi_call[7];
@@ -106,8 +106,11 @@ void init(void) {
     stdout = &serial.uart0;
     stdin  = &serial.uart0;
 
-    printf_P(PSTR("\n%s-%d digi basladi. Ilk beacon %u sn sonra, sonra %u dk arayla.\n"),
-             digi_call, digi_ssid, cfg_w(&CFG.first_s), cfg_w(&CFG.interval_min));
+    printf_P(PSTR("\n%s-%d digi basladi. "), digi_call, digi_ssid);
+    if (cfg_w(&CFG.interval_min))
+        printf_P(PSTR("Ilk beacon %u sn sonra, sonra %u dk arayla.\n"), cfg_w(&CFG.first_s), cfg_w(&CFG.interval_min));
+    else
+        printf_P(PSTR("Beacon kapali (test icin b + Enter).\n"));
 
 }
 
