@@ -153,11 +153,11 @@ static void tlm_send_next(void) {
         len += snprintf_P(p, room, PSTR(":%s:UNIT.Pkt,Pkt"), a);
         tlm_pending &= ~TLM_UNIT;
     } else if (tlm_pending & TLM_EQNS) {
-        len += snprintf_P(p, room, PSTR(":%s:EQNS.0,2,0,0,2,0,0,0,0,0,0,0,0,0,0"), a);
+        len += snprintf_P(p, room, PSTR(":%s:EQNS.0,1,0,0,1,0,0,0,0,0,0,0,0,0,0"), a);
         tlm_pending &= ~TLM_EQNS;
     } else if (tlm_pending & TLM_DATA) {
-        uint16_t rx = (tlm_rx_rate + 1) / 2; if (rx > 255) rx = 255;
-        uint16_t dg = (tlm_dg_rate + 1) / 2; if (dg > 255) dg = 255;
+        uint16_t rx = tlm_rx_rate; if (rx > 255) rx = 255;   // ham sayi: EQNS kaybolsa da dogru gorunur
+        uint16_t dg = tlm_dg_rate; if (dg > 255) dg = 255;
         len += snprintf_P(p, room, PSTR("T#%03u,%03u,%03u,000,000,000,00000000"), tlm_seq, rx, dg);
         tlm_seq = (tlm_seq + 1) % 1000;
         tlm_pending &= ~TLM_DATA;
